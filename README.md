@@ -19,18 +19,18 @@ A modern **Human Resource Management System (HRMS)** designed to manage employee
 
 - **Frontend:** React.js  
 - **Backend:** Spring Boot / Node.js (update based on your implementation)  
-- **Database:** MySQL / Oracle / Supabase  
+- **Database:**  Oracle   
 - **Architecture:** Layered Architecture (Controller → Service → Repository)
 
 ---
 
 ## 📁 Project Structure
 HR_Management_System/
-│── frontend/ # React UI
-│── backend/ # API & business logic
-│── database/ # Database schema / scripts
-│── docs/ # Documentation
-│── README.md
+  │── frontend/ # React UI
+  │── backend/ # API & business logic
+  │── database/ # Database schema / scripts
+  │── docs/ # Documentation
+  │── README.md
 
 
 ---
@@ -45,15 +45,12 @@ cd HR_Management_System
 ### 2. Backend Server Start
 
 cd backend
-npm install        # if Node.js
-# OR
 mvn install        # if Spring Boot
 
 ### 3. Configure Database
 
-Create a database (MySQL / Oracle)
+Create a database (Oracle)
 Update connection settings in:
-.env (Node.js)
 application.properties (Spring Boot)
 
 
