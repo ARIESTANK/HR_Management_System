@@ -26,10 +26,15 @@ A modern **Human Resource Management System (HRMS)** designed to manage employee
 
 ## 📁 Project Structure
 HR_Management_System/
+  
   │── frontend/ # React UI
+  
   │── backend/ # API & business logic
+  
   │── database/ # Database schema / scripts
+  
   │── docs/ # Documentation
+  
   │── README.md
 
 
