@@ -31,8 +31,6 @@ HR_Management_System/
   
   │── backend/ # API & business logic
   
-  │── database/ # Database schema / scripts
-  
   │── docs/ # Documentation
   
   │── README.md
