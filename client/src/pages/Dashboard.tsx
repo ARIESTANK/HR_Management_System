@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/SideBar";
 /* ─── data ─────────────────────────────────────────────────────── */
-const leaveData = [
-  { name: "Sarah Chen",  dept: "Engineering", type: "Sick Leave",   days: "3 days", initials: "SC", color: "#6366f1" },
-  { name: "Mark Wilson", dept: "Marketing",   type: "Casual Leave", days: "1 day",  initials: "MW", color: "#8b5cf6" },
-  { name: "Priya Patel", dept: "Operations",  type: "Sick Leave",   days: "5 days", initials: "PP", color: "#f59e0b" },
-  { name: "Alex Rivera", dept: "Sales",       type: "Casual Leave", days: "2 days", initials: "AR", color: "#059669" },
-];
+
 
 const navItems = [
   { icon: "⊞", label: "Dashboard" },
@@ -191,50 +186,90 @@ function DonutChart({ employees, departments }) {
 
 
 /* ─── LeaveRequests ─────────────────────────────────────────────── */
-function LeaveRequests() {
+function LeaveRequests({leaveData,refreshData}) {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (message: string, type: "success" | "error" = "success") => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const approveLeave = async(id)=>{
+    const response = await fetch(`http://localhost:8080/leaves/statusUpdate/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify("Approved")
+    });
+    console.log(response.status);
+    if(response.status==200){ 
+      addToast("Leave approved", "success");
+      refreshData();
+    }
+  }
+
   const [items, setItems] = useState(leaveData.map(l => ({ ...l, done: false })));
   const dismiss = i => setItems(p => p.map((x, idx) => idx === i ? { ...x, done: true } : x));
   return (
     <div style={{ borderRadius:15, padding:"20px 22px", background:"linear-gradient(135deg,#fff 0%,#f9f8ff 100%)", border:"1px solid #e8e7f3", height:"100%" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap", gap:8 }}>
         <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:15, color:"#1e1b4b" }}>Pending Leave Requests</h3>
-        <span style={{ fontSize:11.5, fontWeight:600, padding:"3px 9px", borderRadius:999, background:"#fee2e2", color:"#dc2626" }}>12 Pending</span>
+        <span style={{ fontSize:11.5, fontWeight:600, padding:"3px 9px", borderRadius:999, background:"#fee2e2", color:"#dc2626" }}>{leaveData.length} Pending</span>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
-        {items.map((item, i) => (
+        {leaveData.map((item, i) => (
           <div key={i} style={{
             display:"flex", alignItems:"center", justifyContent:"space-between",
             padding:"10px 12px", borderRadius:11, background:"#f8f7ff",
-            opacity: item.done ? 0.38 : 1, transition:"opacity 0.3s", flexWrap:"wrap", gap:8,
+            transition:"opacity 0.3s", flexWrap:"wrap", gap:8,
           }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
-              <div style={{ width:34, height:34, borderRadius:"50%", background:item.color, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, fontWeight:700, flexShrink:0 }}>{item.initials}</div>
+              <div style={{ width:34, height:34, borderRadius:"50%", background:item.color, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, fontWeight:700, flexShrink:0 }}>{item.employee.name}</div>
               <div style={{ minWidth:0 }}>
-                <p style={{ margin:0, fontSize:13.5, fontWeight:500, color:"#1e1b4b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.name}</p>
-                <p style={{ margin:0, fontSize:11.5, color:"#94a3b8" }}>{item.dept} · {item.type}</p>
+                <p style={{ margin:0, fontSize:13.5, fontWeight:500, color:"#1e1b4b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.employee.name}</p>
+                <p style={{ margin:0, fontSize:11.5, color:"#94a3b8" }}>{item.employee.department.deptName} · {item.reason}</p>
               </div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:7, flexShrink:0 }}>
               <span style={{ fontSize:12, color:"#64748b", marginRight:2 }}>{item.days}</span>
-              <button disabled={item.done} onClick={() => dismiss(i)} className="action-btn"
+              <button disabled={item.status!="Pending"} onClick={() => approveLeave(item.leaveID)} className="action-btn"
                 style={{ width:27, height:27, borderRadius:7, border:"none", background:"#ecfdf5", cursor:item.done?"default":"pointer", fontSize:13, color:"#059669" }}>✓</button>
-              <button disabled={item.done} onClick={() => dismiss(i)} className="action-btn"
+              <button disabled={item.status!="Pending"} onClick={() => dismiss(i)} className="action-btn"
                 style={{ width:27, height:27, borderRadius:7, border:"none", background:"#fee2e2", cursor:item.done?"default":"pointer", fontSize:13, color:"#ef4444" }}>✕</button>
             </div>
           </div>
         ))}
+        {toasts.length > 0 && (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          {toasts.map(toast => (
+            <Toast key={toast.id} toast={toast} />
+          ))}
+        </div>
+      )}
       </div>
+      
     </div>
   );
 }
 
 /* ─── PayrollSummary ────────────────────────────────────────────── */
 function PayrollSummary({totalSalaries}) {
+
+  function getMonth(){
+    const date = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const month=monthNames[date.getMonth()];
+    const year=date.getFullYear();
+    return `${month} ${year}`;
+  }
+
   return (
     <div style={{ borderRadius:15, padding:"20px 22px", background:"linear-gradient(135deg,#fff 0%,#fef9f3 100%)", border:"1px solid #e8e7f3", height:"100%" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
         <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontWeight:600, fontSize:15, color:"#1e1b4b" }}>Payroll Summary</h3>
-        <span style={{ fontSize:13, color:"#94a3b8" }}>June 2025</span>
+        <span style={{ fontSize:13, color:"#94a3b8" }}>{getMonth()}</span>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         {payrollItems.map(item => (
@@ -258,6 +293,45 @@ function PayrollSummary({totalSalaries}) {
   );
 }
 
+/* ─── Toast Notification ───────────────────────────────────────── */
+interface ToastMessage {
+  id: string;
+  message: string;
+  type: "success" | "error";
+}
+
+function Toast({ toast }: { toast: ToastMessage }) {
+  const [isVisible, setIsVisible] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(false), 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isSuccess = toast.type === "success";
+  return (
+    <div
+      style={{
+        animation: isVisible ? "slideIn 0.3s ease" : "slideOut 0.3s ease",
+        background: isSuccess ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#ef4444,#dc2626)",
+        color: "#fff",
+        padding: "14px 20px",
+        borderRadius: 12,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        minWidth: 300,
+        boxShadow: isSuccess ? "0 8px 24px rgba(16,185,129,0.25)" : "0 8px 24px rgba(239,68,68,0.25)",
+        fontSize: 13.5,
+        fontWeight: 500,
+        backdropFilter: "blur(10px)",
+      }}
+    >
+      <span style={{ fontSize: 18 }}>{isSuccess ? "✓" : "✕"}</span>
+      <span>{toast.message}</span>
+    </div>
+  );
+}
+
 /* ─── Root ──────────────────────────────────────────────────────── */
 export default function HRDashboard() {
   const { w, isMobile, isTablet, isDesktop } = useBreakpoint();
@@ -277,7 +351,25 @@ export default function HRDashboard() {
   const sideBySide = w >= 768;
 
   const [employees, setEmployees]   = useState<Employee[]>([]);
+  const [leaveData,setLeaveData] = useState([]);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  const addToast = (message: string, type: "success" | "error" = "success") => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const leaveDataFetch=async()=>{
+    const response=await fetch("http://localhost:8080/leaves/allPending",{method:"GET"});
+    if(response.status==200){
+      const data=await response.json()
+      setLeaveData(data);
+      addToast("Pending leaves loaded successfully");
+    }
+  }
   const employeeFetch = async () => {
     try {
       const response = await fetch("http://localhost:8080/employees/all", { method: "GET" });
@@ -287,9 +379,11 @@ export default function HRDashboard() {
         data.forEach(e=>{totalSalary+=e.salary;})
         setTotalSalaries(totalSalary);
         setEmployees(data);
+        addToast("Employees loaded successfully");
       }
     } catch (error) {
       console.error("Error fetching employees:", error);
+      addToast("Failed to load employees", "error");
     }
   };
   const deptFetch = async()=>{
@@ -298,18 +392,51 @@ export default function HRDashboard() {
       if (response.status === 200) {
         const data = await response.json();
         setDepartments(data);
+        addToast("Departments loaded successfully");
       }
     } catch (error) {
-      console.error("Error fetching employees:", error);
+      console.error("Error fetching departments:", error);
+      addToast("Failed to load departments", "error");
     }
   }
   useEffect(()=>{
     employeeFetch();
     deptFetch();
+    leaveDataFetch();
   },[])
+
+
   return (
     <div style={{ display:"flex", height:"100vh", background:"linear-gradient(135deg,#f1f0fb 0%,#f5f3ff 50%,#fef9f3 100%)", fontFamily:"'DM Sans',sans-serif", overflow:"hidden" }}>
       <style>{GLOBAL_CSS}</style>
+
+      {/* Toasts */}
+      <div style={{
+        position: "fixed",
+        top: 20,
+        right: 20,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        pointerEvents: "none",
+      }}>
+        <style>{`
+          @keyframes slideIn {
+            from { opacity: 0; transform: translateX(400px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(400px); }
+          }
+        `}</style>
+        {/* {toasts.map(toast => (
+          <div key={toast.id} style={{ pointerEvents: "auto" }}>
+            <Toast toast={toast} />
+          </div>
+        ))} */}
+      </div>
 
       {/* Desktop sidebar */}
       {isDesktop && <Sidebar />}
@@ -373,7 +500,7 @@ export default function HRDashboard() {
 
             <MetricCard delay={150} bg="linear-gradient(135deg,#fff 0%,#fff5f0 100%)"
               icon="⏰" iconBg="#fee2e2" badge="Today" badgeBg="#fee2e2" badgeColor="#d97706"
-              value="12" label="Pending Leaves"
+              value={leaveData.length} label="Pending Leaves"
               footer={<div style={{ display:"flex", gap:10, fontSize:11.5 }}><span style={{ color:"#ef4444" }}>● 5 Sick</span><span style={{ color:"#6366f1" }}>● 7 Casual</span></div>}/>
 
 
@@ -391,7 +518,7 @@ export default function HRDashboard() {
 
           {/* Leave + Payroll */}
           <div style={{ display:"grid", gridTemplateColumns: sideBySide ? "1fr 1fr" : "1fr", gap:14 }}>
-            <LeaveRequests/>
+            <LeaveRequests leaveData={leaveData} refreshData={leaveDataFetch} />
             <PayrollSummary totalSalaries={totalSalaries}/>
           </div>
 

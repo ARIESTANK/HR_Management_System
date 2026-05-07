@@ -8,7 +8,7 @@ const navItems = [
   { icon: "📅", label: "Attendance" ,route:"/test"},
   { icon: "🌴", label: "Leave Management",route:"/test" },
   { icon: "💳", label: "Payroll" ,route:"/test"},
-  { icon: "📊", label: "Reports" ,route:"/test"},
+  { icon: "📊", label: "Departments" ,route:"/departments"},
   { icon: "⚙️", label: "Settings" ,route:"/test"},
 ];
 

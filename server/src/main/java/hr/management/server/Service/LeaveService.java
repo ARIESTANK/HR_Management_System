@@ -6,7 +6,7 @@ import hr.management.server.Repo.EmployeeRepo;
 import java.util.stream.Collectors;
 import hr.management.server.Model.Leave;
 import hr.management.server.Model.Employee;
-
+import hr.management.server.Dto.Status;
 import hr.management.server.Dto.LeaveRequest;
 import hr.management.server.Dto.newLeave;
 import java.util.List;
@@ -37,8 +37,20 @@ public class LeaveService{
             leaveRepo.save(leaveEntity);
         });
     }
+
+    public List<Leave> allPendingLeaves(){
+        return leaveRepo.findByStatus(Status.Pending);
+    }
+
     public List<Leave> EmpLeaves(Long empID) {
         Employee employee = empRepo.findById(empID).orElseThrow(() -> new RuntimeException("Employee not found"));
         return leaveRepo.findByEmployee(employee);
-}
+    }
+
+    public void updateLeave(Status status,Long id){
+        Leave leaveData=leaveRepo.findById(id).orElseThrow(()-> new RuntimeException("Leave Data not found"));
+        leaveData.setStatus(status);
+        leaveRepo.save(leaveData);
+    }
+
 }

@@ -107,8 +107,10 @@ interface ModalProps {
   onSave: (data: Omit<Employee, "id" | "avatar">) => void;
 }
 
-function EmployeeModal({ mode, initial, onClose, onSave }: ModalProps) {
+function EmployeeModal({ mode, initial, onClose, onSave ,reload}: ModalProps) {
   const [name, setName]       = useState(initial?.name ?? "");
+  const [email,setEmail]      = useState("");
+  const [salary,setSalary]    = useState("");
   const [empId, setEmpId]     = useState(initial?.employeeId ?? "");
   const [dept, setDept]       = useState<Department>(initial?.department ?? "Engineering");
   const [role, setRole]       = useState(initial?.role ?? "");
@@ -117,6 +119,7 @@ function EmployeeModal({ mode, initial, onClose, onSave }: ModalProps) {
   const [saving, setSaving]   = useState(false);
   const firstInput = useRef<HTMLInputElement>(null);
   const [departments,setDepartment] = useState([]);
+  const [selectedFile,setSelectedFile]=useState<File | null>(null);
 
   const deptFetch=async()=>{
     const response = await fetch("http://localhost:8080/departments/all",{method:"GET"})
@@ -127,14 +130,68 @@ function EmployeeModal({ mode, initial, onClose, onSave }: ModalProps) {
   }
   useEffect(() => { firstInput.current?.focus(); deptFetch() }, []);
 
+  function createPwd(name:string){
+    return name
+    .toLowerCase()              // Convert to lowercase
+    .replace(/[^a-z]/g, '');
+  }
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !empId.trim() || !role.trim()) { setError("All fields are required."); return; }
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 350)); // simulate async
-    onSave({ name: name.trim(), employeeId: empId.trim(), department: dept, role: role.trim(), status });
+  e.preventDefault();
+
+  // 1. Validation
+  if (!name.trim() || !role.trim()) {
+    setError("All fields are required.");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    // 2. Prepare the JSON data matching your backend's expected structure
+    const employeeData = {
+      name: name.trim(),
+      email: email.trim(),
+      salary: parseFloat(salary), // Ensure this is a number
+      hireDate: new Date().toISOString().split('T')[0], // e.g., "2026-05-07"
+      deptID: parseInt(dept),
+      role: role.toUpperCase(),
+      status: status === "Active" ? 1 : 0, // Convert status string to numeric if needed
+      password: createPwd(name.trim())// Or handle via a state field
+    };
+
+    // 3. Create FormData object
+    const formData = new FormData();
+    
+    // Append the JSON as a Blob with 'application/json' type
+    formData.append(
+      "newEmployee",
+      new Blob([JSON.stringify(employeeData)], { type: "application/json" })
+    );
+
+    // Append the file (Assuming you have a 'selectedFile' state from an <input type="file" />)
+    if (selectedFile) {
+      formData.append("file", selectedFile);
+    }
+
+    // 4. Send Request using fetch or axios
+    const response = await fetch("http://localhost:8080/employees/create", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.ok) {
+      onClose();
+      reload();
+    } else {
+      setError("Failed to save employee.");
+    }
+  } catch (err) {
+    setError("Network error occurred.");
+    console.error(err);
+  } finally {
     setSaving(false);
-  };
+  }
+};
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "9px 12px",
@@ -181,24 +238,30 @@ function EmployeeModal({ mode, initial, onClose, onSave }: ModalProps) {
           <button onClick={onClose} style={{ border: "none", background: "#f1f0fb", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 14, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }} >
           <div>
             <label style={labelStyle}>Full Name</label>
             <input ref={firstInput} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Jane Smith"
               style={inputStyle} onFocus={e => (e.target.style.borderColor = "#6366f1")} onBlur={e => (e.target.style.borderColor = "#e8e7f3")}/>
           </div>
           <div>
-            <label style={labelStyle}>Employee ID</label>
-            <input value={empId} onChange={e => setEmpId(e.target.value)} placeholder="e.g. EMP-007"
+            <label style={labelStyle}>Email</label>
+            <input ref={firstInput} value={email} onChange={e =>  setEmail(e.target.value)} placeholder="e.g. janesmith@gmail.com"
+              style={inputStyle} onFocus={e => (e.target.style.borderColor = "#6366f1")} onBlur={e => (e.target.style.borderColor = "#e8e7f3")}/>
+          </div>
+          <div>
+            <label style={labelStyle}>Salary</label>
+            <input ref={firstInput} value={salary} onChange={e =>  setSalary(e.target.value)} placeholder="e.g. 80000"
               style={inputStyle} onFocus={e => (e.target.style.borderColor = "#6366f1")} onBlur={e => (e.target.style.borderColor = "#e8e7f3")}/>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelStyle}>Department</label>
-              <select value={dept} onChange={e => setDept(e.target.value as Department)}
+              <select value={dept} onChange={e => setDept(e.target.value)}
                 style={{ ...inputStyle, cursor: "pointer" }}
                 onFocus={e => (e.target.style.borderColor = "#6366f1")} onBlur={e => (e.target.style.borderColor = "#e8e7f3")}>
-                {departments.map(d => <option key={d.deptID}>{d.deptName}</option>)}
+                  <option value="0">Choose Department</option>
+                {departments.map(d => <option value={d.deptID}>{d.deptName}</option>)}
               </select>
             </div>
             <div>
@@ -212,8 +275,23 @@ function EmployeeModal({ mode, initial, onClose, onSave }: ModalProps) {
           </div>
           <div>
             <label style={labelStyle}>Role / Title</label>
-            <input value={role} onChange={e => setRole(e.target.value)} placeholder="e.g. Senior Engineer"
-              style={inputStyle} onFocus={e => (e.target.style.borderColor = "#6366f1")} onBlur={e => (e.target.style.borderColor = "#e8e7f3")}/>
+            <select value={role} onChange={e => setRole(e.target.value )}
+                style={{ ...inputStyle, cursor: "pointer" }}
+                onFocus={e => (e.target.style.borderColor = "#6366f1")} onBlur={e => (e.target.style.borderColor = "#e8e7f3")}>
+                <option value="0">Choose A Role</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="EMPLOYEE">EMPLOYEE</option>
+                <option value="MANAGER">MANAGER</option>
+              </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Profile Image</label>
+            <input 
+              type="file" 
+              accept="image/*"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              style={inputStyle}
+            />
           </div>
 
           {error && <p style={{ margin: 0, fontSize: 12, color: "#dc2626", background: "#fef2f2", padding: "7px 10px", borderRadius: 7 }}>{error}</p>}
@@ -673,6 +751,7 @@ export default function EmployeeManagement() {
           initial={editing}
           onClose={() => { setModalMode(null); setEditing(undefined); }}
           onSave={handleSave}
+          reload={employeeFetch}
         />
       )}
       {deleting && (

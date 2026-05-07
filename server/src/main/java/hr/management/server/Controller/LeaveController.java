@@ -21,6 +21,7 @@ import hr.management.server.Service.LeaveService;
 import hr.management.server.Model.Leave;
 import hr.management.server.Dto.LeaveRequest;
 import hr.management.server.Dto.newLeave;
+import hr.management.server.Dto.Status;
 
 @RestController
 @RequestMapping("/leaves")
@@ -36,6 +37,12 @@ public class LeaveController{
         return ResponseEntity.ok(leaveService.allLeaves());
     }
 
+    @GetMapping("/allPending")
+    public ResponseEntity<List<Leave>> allPendingLeaves(){
+        return ResponseEntity.ok(leaveService.allPendingLeaves());
+    }
+
+    
     @GetMapping("/leavesByEmp/{empID}")
     public ResponseEntity<List<Leave>> EmpLeaves(@PathVariable Long empID){
         return ResponseEntity.ok(leaveService.EmpLeaves(empID));
@@ -45,6 +52,12 @@ public class LeaveController{
     public ResponseEntity<String> createLeave(@RequestBody newLeave leave){
         leaveService.createLeave(leave);
         return ResponseEntity.ok("Leave Request Created");
+    }
+
+    @PutMapping("/statusUpdate/{id}")
+    public ResponseEntity<String> updateLeave(@RequestBody Status status , @PathVariable Long id){
+        leaveService.updateLeave(status,id);
+        return ResponseEntity.ok("Leave Status updated");
     }
 
 }

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.http.ResponseEntity;
 import hr.management.server.Dto.EmployeeCount;
+import hr.management.server.Dto.AdminCount;
 import java.util.List;
 
 @RestController
@@ -30,6 +31,11 @@ public class DepartmentController {
     @GetMapping("/getAlongWithEmployee")
     public ResponseEntity<List<EmployeeCount>> depts(){
         return ResponseEntity.ok(deptService.getDepartmentWithEmployeeCount());
+    }
+
+    @GetMapping("/getAlongWithAdmin")
+    public ResponseEntity<List<AdminCount>> deptsAdminEmp(){
+        return ResponseEntity.ok(deptService.getDepartmentWithAdminCount());
     }
 
     @PostMapping("/create")
